@@ -1,0 +1,329 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // admin | hr | manager | employee
+  dept      String?
+  title     String?
+  avatar    String?
+  status    String   @default("Active")
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee  Employee?
+  auditLogs AuditLog[]
+}
+
+model Employee {
+  id              String  @id // e.g. E001
+  userId          String? @unique
+  user            User?   @relation(fields: [userId], references: [id])
+  name            String
+  email           String  @unique
+  phone           String?
+  dept            String
+  role            String  // job title
+  manager         String?
+  managerId       String?
+  managerEmployee Employee? @relation("ManagerReports", fields: [managerId], references: [id])
+  directReports   Employee[] @relation("ManagerReports")
+  salary          Int     @default(0)
+  joined          String
+  status          String  @default("Active")
+  employmentType  String  @default("Full-time")
+  address         String?
+  leaveBalance    Int     @default(14)
+  emergencyName   String?
+  emergencyPhone  String?
+  emergencyRel    String?
+  avatar          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  leaves          LeaveRequest[]
+  attendance      Attendance[]
+  corrections     AttendanceCorrection[]
+  payroll         PayrollRecord[]
+  compensation    CompensationStructure?
+  payrollInputs   PayrollVariable[]
+  reviews         PerformanceReview[]
+  documents       Document[]
+  goals           Goal[]
+}
+
+model Department {
+  id        String @id @default(cuid())
+  name      String @unique
+  head      String?
+  budget    Int    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeaveRequest {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  type       String   // Vacation | Sick Leave | Personal | Maternity
+  start      String
+  end        String
+  days       Int
+  status     String   @default("Pending") // Pending | Pending HR | Approved | Rejected
+  reason     String?
+  decisionNote String?
+  decidedBy  String?
+  decidedOn  String?
+  appliedOn  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Attendance {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  date       String
+  checkIn    String?
+  checkOut   String?
+  hours      Float    @default(0)
+  status     String   @default("Absent") // Present | Late | Absent | On Leave
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, date])
+}
+
+model AttendanceCorrection {
+  id          String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId  String
+  date        String
+  checkIn     String?
+  checkOut    String?
+  reason      String
+  status      String   @default("Pending") // Pending | Approved | Rejected
+  decisionNote String?
+  requestedOn String
+  decidedBy   String?
+  decidedOn   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PayrollRecord {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  month      String   // e.g. "May 2026"
+  currency   String   @default("LKR")
+  basic      Int      @default(0)
+  allowances Int      @default(0)
+  overtime   Int      @default(0)
+  bonus      Int      @default(0)
+  reimbursements Int  @default(0)
+  unpaidLeaveDeduction Int @default(0)
+  recurringDeductions Int @default(0)
+  oneTimeDeductions Int @default(0)
+  gross      Int
+  deductions Int
+  tax        Int
+  net        Int
+  status     String   @default("Draft") // Draft | Approved | Paid
+  approvedBy String?
+  approvedOn String?
+  paidOn     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, month])
+}
+
+model PayrollSetting {
+  id                    String @id @default("default")
+  currency              String @default("LKR")
+  payPeriod             String @default("Monthly")
+  taxRate               Float  @default(0.12)
+  standardDeductionRate Float  @default(0.05)
+  overtimeMultiplier    Float  @default(1.5)
+  unpaidLeaveDailyDivisor Int   @default(22)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model CompensationStructure {
+  id                  String   @id @default(cuid())
+  employee            Employee @relation(fields: [employeeId], references: [id])
+  employeeId          String   @unique
+  basicSalary         Int      @default(0)
+  housingAllowance    Int      @default(0)
+  transportAllowance  Int      @default(0)
+  medicalAllowance    Int      @default(0)
+  recurringDeductions Int      @default(0)
+  bankName            String?
+  bankAccount         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model PayrollVariable {
+  id                 String   @id @default(cuid())
+  employee           Employee @relation(fields: [employeeId], references: [id])
+  employeeId         String
+  month              String
+  overtimeHours      Float    @default(0)
+  overtimeRate       Int      @default(0)
+  bonus              Int      @default(0)
+  unpaidLeaveDays    Float    @default(0)
+  reimbursements     Int      @default(0)
+  oneTimeDeductions  Int      @default(0)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([employeeId, month])
+}
+
+model JobOpening {
+  id          String   @id @default(cuid())
+  title       String
+  dept        String
+  type        String   // Full-time | Part-time | Contract | Intern
+  location    String   @default("Remote") // Remote | On-site | Hybrid
+  posted      String
+  applicants  Int      @default(0)
+  status      String   @default("Active") // Active | Closed
+  description String?
+  minSalary   Int?
+  maxSalary   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidates  Candidate[]
+}
+
+model Candidate {
+  id        String     @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  job       JobOpening @relation(fields: [jobId], references: [id])
+  jobId     String
+  stage     String     @default("Screening")
+  status    String     @default("In Progress") // In Progress | Offer | Hired | Rejected
+  applied   String
+  rating    Int        @default(3)
+  notes     String?
+  interviewNotes String?
+  resumeUrl String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PerformanceCycle {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("Quarterly Review")
+  dept      String   @default("All Departments")
+  startDate String
+  endDate   String
+  status    String   @default("Draft") // Draft | In Progress | Completed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PerformanceReview {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  period     String
+  rating     Float?
+  goals      Int      @default(0)
+  completed  Int      @default(0)
+  status     String   @default("In Progress") // In Progress | Self Submitted | Manager Reviewed | Calibrated | Completed
+  reviewer   String?
+  selfReview String?
+  managerFeedback String?
+  improvementAreas String?
+  recommendation String?
+  hrCalibration String?
+  calibratedBy String?
+  calibratedOn String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, period])
+}
+
+model Goal {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  title      String
+  due        String
+  progress   Int      @default(0)
+  status     String   @default("On Track") // On Track | At Risk | Completed
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  name       String
+  category   String   @default("General")
+  uploadedBy String
+  uploadedOn String
+  status     String   @default("Pending Review") // Pending Review | Verified
+  filePath   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   @default("system")
+  msg       String
+  path      String   @default("/")
+  audience  String   @default("admin,hr,manager,employee")
+  userIds   String   @default("")
+  dept      String?
+  readBy    String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  module    String
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+model Holiday {
+  id   String @id @default(cuid())
+  date String @unique
+  name String
+}
+
+model Setting {
+  key   String @id
+  value String
+}

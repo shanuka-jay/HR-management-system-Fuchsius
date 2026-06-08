@@ -1,0 +1,32 @@
+{
+  "name": "fuchsius-hrms-server",
+  "version": "1.0.0",
+  "description": "Fuchsius HRMS Backend API",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:seed:presentation": "node prisma/seed.presentation.js",
+    "db:seed:fresh": "node prisma/seed.admin.js",
+    "db:studio": "prisma studio",
+    "setup": "npm install && prisma generate && prisma db push && node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "google-auth-library": "^9.15.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.15.2",
+    "prisma": "^5.22.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
